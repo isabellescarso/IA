@@ -34,16 +34,6 @@ O problema que buscamos resolver é **como analisar e compreender de forma rápi
 
 Criar um sistema capaz de consultar dados corporativos e gerar respostas utilizando um **modelo de linguagem (LLM)** combinado com **busca semântica em banco vetorial**.
 
-A plataforma utilizará o conceito de **Retrieval-Augmented Generation (RAG)** para permitir consultas inteligentes sobre dados estruturados e documentos.
-
-## Tecnologias Utilizadas
-
-- Modelos de Linguagem (LLM)
-- Banco Vetorial
-- Containers (Docker)
-- Arquitetura de Dados Moderna
-- MLOps
-
 ## Equipe
 
 Gabriel Habila Pinheiro  
@@ -74,4 +64,3 @@ Rafael Ferro Machado
 RA: 223347  
 
 Henry Santuriao Almeida  
-RA:211726
