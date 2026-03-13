@@ -39,12 +39,22 @@ O problema que buscamos resolver é como permitir que usuários realizem consult
 
 **Product Owner**  
 Responsável pela definição do produto e priorização do backlog.
+Isabelle Munhoz Scarso – RA: 223285 
 
 **Scrum Master**  
 Responsável por garantir o processo ágil.
+Rafael Ferro Machado – RA: 223347  
 
 **Time de Desenvolvimento**  
 Responsável pela implementação da plataforma.
+Gabriel Habila Pinheiro – RA: 211981  
+Gabriela Zala Coutinho Arruda – RA: 212191  
+Cainã Jose Arruda Pinto – RA: 210626  
+Leonardo Braz de Almeida Fonseca – RA: 212092  
+André Lucas Costa Pereira – RA: 200431  
+Lara Beatriz Costa Sabino – RA: 223228  
+Bruno de Oliveira Malena – RA: 222449  
+Henry Santuriao Almeida – RA: 211726
 
 ---
 
