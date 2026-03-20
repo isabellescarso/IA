@@ -1,7 +1,9 @@
 services:
   postgres:
-    image: postgres:15
+    image: postgres:latest
     container_name: rag_postgres
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -9,12 +11,14 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
   minio:
     image: minio/minio:latest
     container_name: rag_minio
     command: server /data --console-address ":9001"
+    env_file:
+      - .env
     environment:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
@@ -24,6 +28,17 @@ services:
     volumes:
       - minio_data:/data
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: >
+      sh -c "ollama serve & sleep 5 && ollama pull moondream && wait"
+
 volumes:
   postgres_data:
   minio_data:
+  ollama_data:
