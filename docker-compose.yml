@@ -28,6 +28,17 @@ services:
     volumes:
       - minio_data:/data
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: >
+      sh -c "ollama serve & sleep 5 && ollama pull moondream && wait"
+
 volumes:
   postgres_data:
   minio_data:
+  ollama_data:
