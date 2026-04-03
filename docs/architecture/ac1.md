@@ -46,58 +46,59 @@ Foi criada a base arquitetural e de infraestrutura necessária para suportar as 
 
 ---
 
-## Sprint 3 — Governança de Dados e Ingestão
+## Sprint 3 — Governança de Dados (Medallion Architecture)
 
-Na Sprint 3 foi iniciada a organização da ingestão e do armazenamento dos dados, com foco na camada inicial de governança.
+Na Sprint 3 foi implementada a base da governança de dados utilizando a arquitetura Medallion, com organização em três camadas: Bronze, Silver e Gold.
 
 ### Evidências
-No `Makefile`, já existe automação para:
+- estruturação do bucket `cgmacros` no MinIO
+- separação das camadas `bronze/`, `silver/` e `gold/`
+- armazenamento dos dados brutos na camada Bronze
+- preparação das camadas Silver e Gold para processamento e consumo analítico
 
-- `download-data`
-- `extract-data`
-- `configure-minio`
-- `upload-minio`
-- `ingest-data`
+### Estrutura do Data Lake
 
-### Fluxo implementado
-- download do dataset a partir da fonte original
-- extração de arquivos compactados
-- configuração do MinIO local
-- criação do bucket
-- upload dos dados brutos para a camada Bronze
+```bash
+cgmacros/
+├── bronze/
+├── silver/
+│   └── cgmacros_tratado.csv
+└── gold/
+    └── dataset_ml.csv
+```
+## Sprint 4 — Pipeline de Dados e Treinamento do Modelo
 
-### Resultado
-Foi implementada a base da ingestão governada dos dados, com armazenamento inicial da camada **Bronze** no MinIO.
-
----
-
-## Sprint 4 — Modelagem e Experimentação com MLflow
-
-Na Sprint 4 foi iniciada a etapa de modelagem e rastreabilidade dos experimentos.
+Na Sprint 4 foi desenvolvido o pipeline de dados integrando a arquitetura Medallion ao processo de Machine Learning.
 
 ### Evidências
 - script `scripts/train_model.py`
 - pasta `mlruns/`
+- leitura dos dados diretamente da camada Bronze no MinIO
+- geração de dados tratados na camada Silver
+- geração de dataset final na camada Gold
 
 ### O que foi realizado
-- leitura e concatenação dos arquivos do dataset
-- pré-processamento dos dados
-- criação de atributos temporais
-- preparação das features numéricas
+- leitura e consolidação dos arquivos CSV a partir do MinIO
+- tratamento e limpeza dos dados
+- criação de atributos temporais (hora, minuto, dia da semana e mês)
+- engenharia de features
+- geração da camada Silver com dados tratados
+- preparação do dataset final para Machine Learning
+- geração da camada Gold com dados prontos para treino
 - separação entre treino e teste
 - treinamento de modelo de regressão
 - cálculo de métricas
 - registro do experimento com MLflow
 
 ### Modelo utilizado
-- `RandomForestRegressor`
+- RandomForestRegressor
 
 ### Métricas registradas
-- `MAE`
-- `R²`
+- MAE
+- R²
 
 ### Resultado
-Foi implementado um fluxo inicial de treinamento com rastreamento de parâmetros, métricas e modelo no MLflow, consolidando a base da Sprint 4.
+Foi estruturado um pipeline de dados integrando as camadas Bronze, Silver e Gold ao treinamento do modelo, com rastreamento de parâmetros, métricas e artefatos no MLflow.
 
 ---
 
@@ -105,10 +106,11 @@ Foi implementado um fluxo inicial de treinamento com rastreamento de parâmetros
 
 Com base nas evidências presentes no repositório, o projeto já apresenta entregas compatíveis com as Sprints 1, 2, 3 e 4, contemplando:
 
-- definição do produto
-- arquitetura inicial
-- infraestrutura base
-- ingestão e armazenamento inicial de dados
-- modelagem com registro de experimentos
+- definição do produto  
+- arquitetura inicial  
+- infraestrutura base  
+- governança de dados com arquitetura Medallion  
+- pipeline de dados com geração de Bronze, Silver e Gold  
+- modelagem com registro de experimentos no MLflow  
 
 Essas etapas formam a base necessária para a evolução posterior do projeto em direção ao pipeline completo de embeddings, armazenamento vetorial e construção do fluxo RAG.

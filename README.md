@@ -2,7 +2,7 @@
 
 Projeto desenvolvido para a disciplina de Inteligência Artificial.
 
-O objetivo é construir uma plataforma de **Retrieval-Augmented Generation (RAG)** para realizar consultas inteligentes sobre dados da área da saúde, com apoio de **governança de dados**, **infraestrutura local containerizada** e **experimentação com MLflow**.
+O objetivo é construir uma plataforma de **Retrieval-Augmented Generation (RAG)** para realizar consultas inteligentes sobre dados da área da saúde, com apoio de **governança de dados**, **infraestrutura local containerizada**, **arquitetura Medallion** e **rastreamento de experimentos com MLflow**.
 
 ---
 
@@ -10,10 +10,10 @@ O objetivo é construir uma plataforma de **Retrieval-Augmented Generation (RAG)
 
 A proposta do projeto é desenvolver uma plataforma capaz de:
 
-- organizar dados de saúde em uma arquitetura com governança;
-- permitir consultas inteligentes sobre os dados;
-- utilizar inteligência artificial para apoiar interpretação das informações;
-- preparar a base para um fluxo de RAG;
+- organizar dados de saúde em um Data Lake com governança;
+- permitir consultas inteligentes sobre esses dados;
+- utilizar inteligência artificial para apoiar a interpretação das informações;
+- preparar a base para evolução de um fluxo de RAG;
 - registrar experimentos e evolução de modelos com MLflow.
 
 ---
@@ -87,7 +87,7 @@ Lara Beatriz Costa Sabino – RA: 223228
 Bruno de Oliveira Malena – RA: 222449  
 Henry Santuriao Almeida – RA: 211726
 
-**Evidência da Sprint 1:** documentação inicial do produto e backlog descritos neste README.
+**Evidência da Sprint 1:** definição do produto, contexto de negócio, equipe e backlog inicial documentados neste README.
 
 ---
 
@@ -99,14 +99,14 @@ Nesta sprint foi definida a arquitetura inicial da solução e estruturada a inf
 
 A arquitetura do projeto contempla os seguintes componentes principais:
 
-- **Gradio / Interface de Chat** para interação com o usuário
+- **Interface / Frontend** para interação com o usuário
 - **API / Backend** para orquestração central
 - **Ollama / LLM Local** para inferência
 - **PostgreSQL** para metadados e auditoria
 - **MinIO** como Data Lake
 - **Milvus / Vector Store** previsto para armazenamento vetorial
 - **MLflow** para rastreabilidade de experimentos
-- **Pipeline de Embeddings e RAG** previstos na estrutura do projeto
+- **Pipeline de embeddings e RAG** previstos na evolução da plataforma
 
 ### Infraestrutura Inicial
 
@@ -125,113 +125,95 @@ A infraestrutura local foi iniciada com Docker Compose, incluindo os seguintes s
 
 ### Arquitetura do Projeto
 
-
 ![Arquitetura do Projeto](docs/architecture/arquitetura.png)
 
 
 ---
 
-## Sprint 3 — Governança de Dados e Ingestão
+## Sprint 3 — Governança de Dados (Medallion Architecture)
 
-Nesta sprint foi iniciada a organização dos dados e da ingestão, com foco em estruturar a base do projeto em um fluxo de governança.
+Nesta sprint foi implementada a base da governança de dados utilizando a arquitetura Medallion, com organização em três camadas: Bronze, Silver e Gold.
 
-### Objetivo da Sprint 3
+### Estrutura do Data Lake (MinIO)
 
-- realizar o download do dataset
-- extrair arquivos compactados
-- preparar os dados brutos
-- enviar os dados para o Data Lake
-- estruturar a base de ingestão para evolução da governança
+O bucket principal `cgmacros` foi estruturado da seguinte forma:
 
-### Fluxo Implementado
+```bash
+cgmacros/
+├── bronze/
+├── silver/
+└── gold/
+```
 
-O projeto já possui automação para:
+### Camadas
 
-- baixar os dados da fonte original
-- extrair arquivos `.zip`, `.tar.gz` e `.gz`
-- configurar o MinIO local
-- criar bucket de armazenamento
-- enviar os dados para a camada Bronze no MinIO
+- **Bronze:** armazenamento dos dados brutos, sem qualquer tratamento
+- **Silver:** camada destinada ao tratamento, limpeza e enriquecimento dos dados
+- **Gold:** camada final, com dados preparados para análise e treinamento de modelos
 
-### Evidências da Sprint 3
+### Atividades realizadas
 
-No `Makefile`, os comandos abaixo representam a base da ingestão:
+- Download do dataset CGMacros
+- Organização dos arquivos por paciente
+- Upload dos dados para o MinIO na camada Bronze
+- Estruturação do Data Lake com separação em Bronze, Silver e Gold
+- Preparação do ambiente para processamento e transformação dos dados
 
-- `download-data`
-- `extract-data`
-- `configure-minio`
-- `upload-minio`
-- `ingest-data`
+### Estrutura atual do Data Lake
 
-Atualmente os dados brutos são enviados para:
+```bash
+cgmacros/
+├── bronze/
+├── silver/
+│   └── cgmacros_tratado.csv
+└── gold/
+    └── dataset_ml.csv
+```
 
-- `cgmacros/bronze/`
+Essa estrutura permite a separação clara entre dados brutos, dados tratados e dados prontos para consumo analítico, seguindo boas práticas de engenharia de dados.
 
-### Relação com Governança
-
-A Sprint 3 representa o início da organização governada dos dados, especialmente da camada **Bronze**, que concentra os dados brutos obtidos da fonte original. Essa base é importante para a evolução futura para etapas de tratamento, embeddings e consumo pela aplicação.
-
-**Evidência da Sprint 3:** fluxo automatizado de ingestão e armazenamento inicial no MinIO.
+**Evidência da Sprint 3:** estruturação do Data Lake no MinIO com separação das camadas Bronze, Silver e Gold, permitindo a organização governada do pipeline de dados.
 
 ---
 
-## Sprint 4 — Modelagem e Experimentação com MLflow
+## Sprint 4 — Pipeline de Dados e Treinamento do Modelo
 
-Nesta sprint foi iniciada a etapa de modelagem com foco em construir uma base analítica para o projeto e registrar experimentos de forma rastreável.
+Nesta sprint foi desenvolvido o pipeline de dados integrando a arquitetura Medallion ao processo de Machine Learning.
 
-### Objetivo da Sprint 4
+### Fluxo do Pipeline
 
-- preparar os dados para treinamento
-- definir uma variável alvo
-- treinar um modelo de machine learning
-- avaliar métricas de desempenho
-- registrar parâmetros, métricas e artefatos com MLflow
+```text
+Bronze → Silver → Gold → Treinamento
+```
 
-### Problema Trabalhado
+### Etapas realizadas
 
-Foi utilizado o dataset CGMacros com foco em predição relacionada à coluna:
+- Leitura dos dados diretamente do MinIO na camada Bronze
+- Consolidação dos arquivos CSV em um único dataset
+- Tratamento e limpeza dos dados
+- Engenharia de features (extração de hora, minuto, dia da semana e mês)
+- Geração da camada Silver com dados tratados
+- Seleção de variáveis numéricas e preparação final dos dados
+- Geração da camada Gold com dados prontos para Machine Learning
+- Separação dos dados em treino e teste
+- Treinamento de modelo de regressão com Random Forest
+- Avaliação com métricas MAE e R²
+- Registro de experimentos utilizando MLflow
 
-- **Dexcom GL**
+### Tecnologias utilizadas na Sprint 4
 
-### Etapas Realizadas no Treinamento
+- Python
+- pandas
+- numpy
+- scikit-learn
+- MinIO
+- MLflow
 
-O script `scripts/train_model.py` realiza:
+### Resultado
 
-- leitura dos dados
-- concatenação dos CSVs por paciente
-- pré-processamento
-- criação de atributos temporais
-- geração de features cíclicas
-- remoção de colunas não utilizadas
-- separação entre treino e teste
-- treinamento de modelo de regressão
-- cálculo de métricas
-- rastreamento com MLflow
+Foi estruturado um pipeline de dados integrando as camadas Bronze, Silver e Gold ao treinamento do modelo, garantindo organização, rastreabilidade e base para evolução da plataforma.
 
-### Modelo Utilizado
-
-- **RandomForestRegressor**
-
-### Métricas Registradas
-
-- **MAE**
-- **R²**
-
-### Rastreamento com MLflow
-
-O projeto registra no MLflow:
-
-- parâmetros do experimento
-- quantidade de linhas e features
-- métricas do modelo
-- artefato do modelo treinado
-
-### Evidências da Sprint 4
-
-- `scripts/train_model.py`
-- pasta `mlruns/`
-
-**Evidência da Sprint 4:** treinamento funcional com registro de experimento em MLflow.
+**Evidência da Sprint 4:** pipeline funcional com leitura da Bronze, geração de Silver e Gold, treinamento do modelo e registro de métricas e artefatos no MLflow.
 
 ---
 
@@ -299,20 +281,7 @@ make up
 make app
 ```
 
-## 3. Executar ingestão de dados
-
-```bash
-make ingest-data
-```
-
-Esse fluxo realiza:
-
-- download do dataset
-- extração dos arquivos
-- configuração do MinIO
-- upload dos dados para a camada Bronze
-
-## 4. Executar treinamento do modelo
+## 3. Executar treinamento do modelo
 
 ```bash
 python scripts/train_model.py
@@ -326,10 +295,13 @@ python scripts/train_model.py
 Responsável por metadados e suporte à arquitetura da aplicação.
 
 ## MinIO
-Responsável pelo armazenamento dos dados no Data Lake.
+Responsável pelo armazenamento dos dados no Data Lake, organizado em Bronze, Silver e Gold.
 
 ## Ollama
 Responsável pela camada de modelo local utilizada na arquitetura do projeto.
+
+## MLflow
+Responsável pelo rastreamento de parâmetros, métricas e artefatos dos experimentos.
 
 ---
 
@@ -340,8 +312,8 @@ No estado atual do projeto, as seguintes evidências podem ser identificadas:
 
 - **Sprint 1:** definição do produto, domínio, empresa fictícia, problema, requisitos, backlog e papéis Scrum
 - **Sprint 2:** arquitetura definida e infraestrutura inicial com Docker Compose
-- **Sprint 3:** ingestão automatizada de dados e armazenamento da camada Bronze no MinIO
-- **Sprint 4:** treinamento de modelo com métricas e rastreamento de experimento em MLflow
+- **Sprint 3:** organização do Data Lake com arquitetura Medallion e separação entre Bronze, Silver e Gold
+- **Sprint 4:** pipeline de dados integrado ao treinamento do modelo com rastreamento no MLflow
 
 ---
 
@@ -354,6 +326,12 @@ As próximas etapas do projeto envolvem a evolução da plataforma para:
 - construção do fluxo RAG
 - integração completa entre backend, LLM e recuperação de contexto
 - interface de consulta ao usuário
+
+---
+
+# Documento complementar
+
+Para resumo das evidências da AC1, consulte: `docs/ac1.md`
 
 ---
 
