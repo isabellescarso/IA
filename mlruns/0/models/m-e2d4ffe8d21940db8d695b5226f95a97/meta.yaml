@@ -1,0 +1,10 @@
+artifact_location: file:C:/Users/josec/OneDrive/Desktop/IA/IA/mlruns/0/models/m-e2d4ffe8d21940db8d695b5226f95a97/artifacts
+creation_timestamp: 1774544065825
+experiment_id: '0'
+last_updated_timestamp: 1774544073331
+model_id: m-e2d4ffe8d21940db8d695b5226f95a97
+model_type: null
+name: modelo_glicose
+source_run_id: dbf18aa19093493697edd4bb63e34bc4
+status: 2
+status_message: null
