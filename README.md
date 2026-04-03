@@ -38,6 +38,10 @@ O problema que buscamos resolver é como permitir que usuários realizem consult
 - Permitir consultas inteligentes aos dados  
 - Utilizar inteligência artificial para auxiliar na interpretação das informações  
 - Facilitar o acesso e a compreensão dos dados disponíveis  
+---
+## Link dataset utilizado
+
+https://www.physionet.org/content/cgmacros/1.0.0/
 
 ---
 
