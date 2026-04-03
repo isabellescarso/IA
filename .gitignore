@@ -2,3 +2,5 @@
 *.venv
 *.toml
 *.lock
+mlruns/
+mlflow.db
