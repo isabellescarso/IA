@@ -1,4 +1,4 @@
-.PHONY: up down app run download-data extract-data configure-minio upload-minio ingest-data train clean-data
+.PHONY: up down app run download-data extract-data configure-minio upload-minio ingest-data train clean-data embeddings search
 
 # ── variáveis ──────────────────────────────────────────────────────────────────
 include .env
@@ -46,3 +46,9 @@ train:
 
 clean-data:
 	rm -rf $(DATA_RAW_PATH)
+
+embeddings:
+	python scripts/generate_embeddings.py
+
+search:
+	python scripts/search_embeddings.py
