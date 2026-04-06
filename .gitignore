@@ -3,4 +3,9 @@
 *.toml
 *.lock
 mlruns/
+mlflow.dbsrc/data/bronze/
+src/data/
+**/__pycache__/
+*.pyc
 mlflow.db
+.idea/
