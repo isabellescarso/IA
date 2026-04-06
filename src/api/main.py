@@ -7,6 +7,8 @@ from rag.rag_pipeline import RagPipeline
 from mlops.ask_tracker import AskExperimentTracker
 
 from api.dependencies import build_ask_tracker
+from api.routes.metadata import router as metadata_router, MetadataResponse, MetadataHandler
+from api.dependencies import build_metadata_handler
 
 load_dotenv()
 
@@ -25,3 +27,7 @@ def ask(
     tracker: AskExperimentTracker = Depends(build_ask_tracker),
 ) -> AskResponse:
     return AskHandler(pipeline, tracker).handle(request)
+
+@app.get("/metadata", response_model=MetadataResponse)
+def metadata(handler: MetadataHandler = Depends(build_metadata_handler)) -> MetadataResponse:
+    return handler.handle()

@@ -8,6 +8,8 @@ from rag.rag_pipeline import OllamaLlmClient, RagPipeline
 
 from mlops.ask_tracker import AskExperimentTracker
 
+from api.routes.metadata import MetadataHandler
+
 
 @lru_cache
 def build_rag_pipeline() -> RagPipeline:
@@ -37,4 +39,20 @@ def build_ask_tracker() -> AskExperimentTracker:
     return AskExperimentTracker(
         tracking_uri="sqlite:///mlflow.db",
         experiment_name="RAG_Requests",
+    )
+
+@lru_cache
+def build_metadata_handler() -> MetadataHandler:
+    connections.connect(
+        alias="default",
+        host=os.getenv("MILVUS_HOST", "localhost"),
+        port=os.getenv("MILVUS_PORT", "19530"),
+    )
+    collection = Collection(os.getenv("MILVUS_COLLECTION", "cgmacros_embeddings"))
+    collection.load()
+    return MetadataHandler(
+        collection=collection,
+        patients=["CGMacros-012", "CGMacros-039"],
+        embed_model=os.getenv("EMBED_MODEL", "nomic-embed-text"),
+        llm_model=os.getenv("LLM_MODEL", "llama3.2"),
     )

@@ -1,8 +1,8 @@
 from io import BytesIO
 from minio import Minio
 
-from .loaders import CsvDirectoryScanner, PatientCsvFile
-from .converters import ParquetBuffer
+from src.ingestion.loaders import CsvDirectoryScanner, PatientCsvFile
+from src.ingestion.converters import ParquetBuffer
 
 class MinioParquetUploader:
     def __init__(self, minio_client: Minio, bucket_name: str):

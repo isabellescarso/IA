@@ -3,7 +3,7 @@ from pathlib import Path
 from minio import Minio
 from dotenv import load_dotenv
 
-from ..ingestion import (CsvDirectoryScanner, BronzeIngestionPipeline, MinioParquetUploader)
+from src.ingestion import (CsvDirectoryScanner, BronzeIngestionPipeline, MinioParquetUploader)
 
 load_dotenv()
 

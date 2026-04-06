@@ -2,7 +2,7 @@ import os
 from minio import Minio
 from dotenv import load_dotenv
 import mlflow
-from ..ingestion.eda_report import ParquetDataFrame, PatientEdaRunner
+from src.ingestion.eda_report import ParquetDataFrame, PatientEdaRunner
 
 load_dotenv()
 
