@@ -2,7 +2,10 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from pymilvus import Collection
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/metadata",
+    tags=["metadata"],
+)
 
 
 class MetadataResponse(BaseModel):
