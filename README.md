@@ -1,4 +1,3 @@
-olha esse codigo aqui 
 # Plataforma RAG com Governança de Dados
 
 Projeto desenvolvido para a disciplina de Inteligência Artificial.
