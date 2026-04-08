@@ -4,10 +4,7 @@ from pydantic import BaseModel
 from rag.rag_pipeline import RagPipeline
 from mlops.ask_tracker import AskExperimentTracker
 
-router = APIRouter(
-    prefix="/ask",
-    tags=["ask"],
-)
+router = APIRouter()
 
 
 class AskRequest(BaseModel):
