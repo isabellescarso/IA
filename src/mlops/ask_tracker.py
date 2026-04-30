@@ -1,7 +1,11 @@
 import time
 import mlflow
 
-
+"""
+Params: question, answer
+Metric: latency_seconds
+Registra cada consulta feita pelo usuário via API
+"""
 class AskExperimentTracker:
     def __init__(self, tracking_uri: str, experiment_name: str):
         mlflow.set_tracking_uri(tracking_uri)

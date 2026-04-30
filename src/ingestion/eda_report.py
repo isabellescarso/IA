@@ -3,7 +3,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import mlflow
 
+"""
+Params: patient_id, row_count, column_count, columns_above_30pct_missing
+Metrics: glucose_mean, glucose_std, glucose_min, glucose_max, glucose_missing
+Artifacts: gráfico de missing ratio + histograma de distribuição de glicose (.png)
 
+Quantos dados tem? — registra quantas linhas e colunas existem
+O que está faltando? — calcula a porcentagem de valores em branco por coluna e gera um gráfico de barras mostrando isso. Também lista quais colunas têm mais de 30% de buracos — essas são problemáticas
+Como está a glicose? — pega a coluna Dexcom GL (a medição de glicose) e calcula média, desvio padrão, mínimo, máximo e quantos valores faltam. Gera também um histograma mostrando a distribuição dos valores
+
+"""
 class ParquetDataFrame:
     def __init__(self, raw_bytes: bytes):
         self._dataframe = pd.read_parquet(BytesIO(raw_bytes))

@@ -5,7 +5,13 @@ import pyarrow.parquet as pq
 from minio import Minio
 from ingestion.gold_transformations import GoldTransformationPipeline
 
+"""
+Silver_Ingestion / Gold_Ingestion (ingest_silver.py, ingest_gold.py)
 
+Params logados por run: patient_id, key, rows, columns
+Run name: silver_{patient_id} / gold_{patient_id}
+
+"""
 class SilverParquetReader:
     def __init__(self, client: Minio, bucket: str):
         self._client = client

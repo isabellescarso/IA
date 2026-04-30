@@ -7,6 +7,10 @@ from src.ingestion import (CsvDirectoryScanner, BronzeIngestionPipeline, MinioPa
 
 load_dotenv()
 
+"""
+CsvDirectoryScanner faz rglob("*.csv"), filtra só os válidos (exists() + .csv),
+e o BronzeIngestionPipeline converte cada um para Parquet e sobe no MinIO. Nenhuma transformação — dado bruto direto.
+"""
 BRONZE_ROOT = Path("src/data/bronze/CGMacros")
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000").replace("http://", "").replace("https://", "")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "cgmacros")

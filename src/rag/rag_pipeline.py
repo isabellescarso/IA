@@ -30,11 +30,13 @@ class OllamaLlmClient:
 
 
 class RagPipeline:
-    def __init__(self, retriever: ContextRetriever, llm: OllamaLlmClient):
+    def __init__(self, retriever: ContextRetriever, llm: OllamaLlmClient, predictor: RidgeGlucosePredictor):
         self._retriever = retriever
         self._llm = llm
+        self._predictor = predictor
 
     def answer(self, question: str) -> LlmResponse:
         context = self._retriever.retrieve(question)
-        prompt = PromptBuilder().build(question, context)
+        prediction = self._predictor.predict(context.as_feature_row())
+        prompt = PromptBuilder().build(question, context, prediction)
         return self._llm.generate(prompt.as_text())

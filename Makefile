@@ -52,7 +52,7 @@ eda:
 	$(PYTHONPATH) uv run -m scripts.eda.eda_bronze
 
 embeddings:
-	$(PYTHONPATH) uv run -m scripts.generate_embeddings
+	$(PYTHONPATH) EMBED_WORKERS=10 uv run -m scripts.generate_embeddings
 
 train:
 	$(PYTHONPATH) uv run -m scripts.train_model

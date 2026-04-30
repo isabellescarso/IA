@@ -22,7 +22,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     entrypoint: >
-      sh -c "ollama serve & sleep 5 && ollama pull moondream && wait"
+      sh -c "ollama serve & sleep 5 && ollama pull moondream && ollama pull nomic-embed-text && wait"
 
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
@@ -55,8 +55,38 @@ services:
     volumes:
       - milvus_data:/var/lib/milvus
 
+  attu:
+    image: zilliz/attu:latest
+    container_name: rag_attu
+    environment:
+      MILVUS_URL: milvus:19530
+    ports:
+      - "8888:3000"
+    depends_on:
+      - milvus
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: rag_mlflow
+    user: "root"
+    environment:
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=mlflow-artifacts:/
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root mlflow-artifacts:/
+      --artifacts-destination /mlflow/artifacts
+      --serve-artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+
 volumes:
   minio_data:
   ollama_data:
   etcd_data:
   milvus_data:
+  mlflow_data:

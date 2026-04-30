@@ -1,6 +1,10 @@
 import mlflow
 
-
+"""
+Run name: prompt_{variant_name}
+Params: variant, answer (truncado em 500 chars)
+Metrics: latency_seconds, answer_length
+"""
 class PromptVariant:
     def __init__(self, name: str, template: str):
         self._name = name
