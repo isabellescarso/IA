@@ -23,7 +23,9 @@ class SearchResultCollection:
     def as_texts(self) -> list[str]:
         return [hit.entity.get("text") for hit in self._hits]
 
-
+"""
+Busca semantica 
+"""
 class MilvusSemanticSearcher:
     def __init__(self, collection: Collection):
         self._collection = collection

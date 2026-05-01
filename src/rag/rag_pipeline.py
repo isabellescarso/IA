@@ -2,6 +2,8 @@ import requests
 from rag.retriever import ContextRetriever
 from rag.prompt_builder import PromptBuilder
 
+from rag.glucose_predictor import GlucosePrediction, RidgeGlucosePredictor
+from rag.retriever import RetrievedContext
 
 class LlmResponse:
     def __init__(self, content: str):
@@ -12,6 +14,14 @@ class LlmResponse:
 
     def as_text(self) -> str:
         return self._content
+
+
+class OllamaEndpoint:
+    def __init__(self, base_url: str):
+        self._base_url = base_url
+
+    def generate_url(self) -> str:
+        return f"{self._base_url}/api/generate"
 
 
 class OllamaLlmClient:
@@ -29,14 +39,23 @@ class OllamaLlmClient:
         return LlmResponse(response.json()["response"])
 
 
-class RagPipeline:
-    def __init__(self, retriever: ContextRetriever, llm: OllamaLlmClient, predictor: RidgeGlucosePredictor):
+class ContextualPredictor:
+    def __init__(self, retriever: ContextRetriever, predictor: RidgeGlucosePredictor):
         self._retriever = retriever
-        self._llm = llm
         self._predictor = predictor
 
-    def answer(self, question: str) -> LlmResponse:
+    def resolve(self, question: str) -> tuple[RetrievedContext, GlucosePrediction]:
         context = self._retriever.retrieve(question)
         prediction = self._predictor.predict(context.as_feature_row())
+        return context, prediction
+
+
+class RagPipeline:
+    def __init__(self, contextual_predictor: ContextualPredictor, llm: OllamaLlmClient):
+        self._contextual_predictor = contextual_predictor
+        self._llm = llm
+
+    def answer(self, question: str) -> LlmResponse:
+        context, prediction = self._contextual_predictor.resolve(question)
         prompt = PromptBuilder().build(question, context, prediction)
         return self._llm.generate(prompt.as_text())

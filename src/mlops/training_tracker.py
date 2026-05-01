@@ -51,4 +51,8 @@ class TrainingExperimentTracker:
             mlflow.log_params(params)
             metrics.log()
             importance.log()
-            mlflow.sklearn.log_model(model, "modelo_glicose")
+            mlflow.sklearn.log_model(
+                model,
+                artifact_path="modelo_glicose",
+                registered_model_name="modelo_glicose",
+            )

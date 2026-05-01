@@ -17,6 +17,10 @@ class RetrievedContext:
         return TextCollectionParser(self._texts).as_feature_dataframe()
 
 
+"""
+Retorna o TOP_K
+Do milvus em uma lista de textos
+"""
 class ContextRetriever:
     def __init__(self, embedder: OllamaEmbedder, searcher: MilvusSemanticSearcher):
         self._embedder = embedder

@@ -1,6 +1,6 @@
 from rag.retriever import RetrievedContext
 
-
+from rag.glucose_predictor import GlucosePrediction
 class RagPrompt:
     def __init__(self, content: str):
         self._content = content
@@ -19,7 +19,7 @@ class PromptBuilder:
         "Resposta:"
     )
 
-    def build(self, question: str, context: RetrievedContext, prediction: RidgePrediction) -> RagPrompt:
+    def build(self, question: str, context: RetrievedContext, prediction: GlucosePrediction) -> RagPrompt:
         content = self.TEMPLATE.format(
             context=context.as_joined_text(),
             prediction=prediction.as_text(),

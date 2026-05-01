@@ -22,7 +22,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     entrypoint: >
-      sh -c "ollama serve & sleep 5 && ollama pull moondream && ollama pull nomic-embed-text && wait"
+      sh -c "ollama serve & sleep 5 && ollama pull moondream && ollama pull nomic-embed-text && ollama pull llama3.2 && wait"
 
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
@@ -82,7 +82,8 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - mlflow_data:/mlflow
+      - ./mlruns:/mlflow/artifacts
+      - ./mlflow_db:/mlflow
 
 volumes:
   minio_data:

@@ -11,6 +11,9 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
 
 from mlops.training_tracker import FeatureImportanceLogger, ModelMetrics, TrainingExperimentTracker
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+
 
 load_dotenv()
 
@@ -103,7 +106,10 @@ class CandidateModelCollection:
                 learning_rate=0.1, n_jobs=-1,
                 random_state=42, verbosity=0,
             )),
-            CandidateModel("ridge", Ridge(alpha=1.0)),
+            CandidateModel("ridge", Pipeline([
+                ("imputer", SimpleImputer(strategy="median")),
+                ("ridge", Ridge(alpha=1.0)),
+            ])),
         ]
 
     def each(self) -> list[CandidateModel]:
