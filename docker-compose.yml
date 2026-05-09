@@ -105,6 +105,74 @@ services:
       retries: 10
       start_period: 30s
 
+  ingest-raw:
+    image: alpine:latest
+    container_name: rag_ingest_raw
+    env_file: .env
+    volumes:
+      - ./src/data/bronze:/data/bronze
+      - ./scripts/ingest_data.sh:/ingest_data.sh
+    entrypoint: sh /ingest_data.sh
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: on-failure
+
+    pipeline:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: rag_pipeline
+      env_file: .env
+      environment:
+        MINIO_ENDPOINT: minio:9000
+        MINIO_BUCKET: ${MINIO_BUCKET:-cgmacros}
+        MINIO_USER: ${MINIO_USER}
+        MINIO_PASSWORD: ${MINIO_PASSWORD}
+        PATIENTS: ${PATIENTS:-CGMacros-012,CGMacros-039}
+        PYTHONPATH: src
+      command: >
+        sh -c "
+          python -m scripts.ingest.ingest_bronze &&
+          python -m scripts.ingest.ingest_silver &&
+          python -m scripts.ingest.ingest_gold &&
+          python -m scripts.train_model
+        "
+      depends_on:
+        ingest-raw:
+          condition: service_completed_successfully
+        milvus:
+          condition: service_healthy
+        ollama:
+          condition: service_healthy
+        mlflow:
+          condition: service_healthy
+      restart: on-failure
+
+  embeddings:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag_embeddings
+    env_file: .env
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_BUCKET: ${MINIO_BUCKET:-cgmacros}
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASSWORD: ${MINIO_PASSWORD}
+      MILVUS_HOST: milvus
+      MILVUS_PORT: "19530"
+      MILVUS_COLLECTION: ${MILVUS_COLLECTION:-cgmacros_embeddings}
+      OLLAMA_URL: http://ollama:11434
+      EMBED_MODEL: ${EMBED_MODEL:-nomic-embed-text}
+    depends_on:
+      milvus:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    command: python -m scripts.generate_embeddings
+    restart: on-failure
+
   attu:
     image: zilliz/attu:latest
     container_name: rag_attu

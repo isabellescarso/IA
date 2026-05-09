@@ -1,28 +1,25 @@
-import os
-from pathlib import Path
 from minio import Minio
-from dotenv import load_dotenv
+from ._store import MinioStore, PatientList
 
-from src.ingestion import (CsvDirectoryScanner, BronzeIngestionPipeline, MinioParquetUploader)
 
-load_dotenv()
+class BronzeValidator:
+    def __init__(self, store: MinioStore, patients: PatientList):
+        self._store = store
+        self._patients = patients
 
-"""
-CsvDirectoryScanner faz rglob("*.csv"), filtra só os válidos (exists() + .csv),
-e o BronzeIngestionPipeline converte cada um para Parquet e sobe no MinIO. Nenhuma transformação — dado bruto direto.
-"""
-BRONZE_ROOT = Path("src/data/bronze/CGMacros")
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000").replace("http://", "").replace("https://", "")
-MINIO_BUCKET = os.getenv("MINIO_BUCKET", "cgmacros")
+    def run(self) -> None:
+        client = self._store.client()
+        for pid in self._patients:
+            self._validate(client, pid)
 
-client = Minio(
-    MINIO_ENDPOINT,
-    access_key=os.getenv("MINIO_USER"),
-    secret_key=os.getenv("MINIO_PASSWORD"),
-    secure=False,
-)
+    def _validate(self, client: Minio, pid: str) -> None:
+        path = f"bronze/CGMacros/{pid}/{pid}.csv"
+        try:
+            client.stat_object(self._store.bucket, path)
+            print(f"bronze ok: {path}")
+        except Exception as e:
+            raise RuntimeError(f"bronze missing: {path}") from e
 
-scanner = CsvDirectoryScanner(BRONZE_ROOT)
-uploader = MinioParquetUploader(client, MINIO_BUCKET)
-pipeline = BronzeIngestionPipeline(scanner, uploader)
-pipeline.run()
+
+if __name__ == "__main__":
+    BronzeValidator(MinioStore.from_env(), PatientList.from_env()).run()
