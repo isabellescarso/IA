@@ -1,12 +1,10 @@
 services:
 
-  # ── Armazenamento de Objetos ───────────────────────────────────────────────
   minio:
     image: minio/minio:latest
     container_name: rag_minio
     command: server /data --console-address ":9001"
-    env_file:
-      - .env
+    env_file: .env
     environment:
       MINIO_ROOT_USER: ${MINIO_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
@@ -17,11 +15,11 @@ services:
       - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 10s
 
-  # ── Banco Relacional ───────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: rag_postgres
@@ -39,8 +37,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
-  # ── LLM e Embeddings ──────────────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: rag_ollama
@@ -48,7 +46,6 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    # Sobe dois modelos: llama3.2 (principal) e mistral (segundo modelo)
     entrypoint: >
       sh -c "ollama serve &
              sleep 5 &&
@@ -57,12 +54,12 @@ services:
              ollama pull mistral &&
              wait"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434"]
-      interval: 30s
+      test: [ "CMD-SHELL", "ollama list || exit 1" ]
+      interval: 15s
       timeout: 10s
       retries: 5
+      start_period: 15s
 
-  # ── Banco Vetorial ─────────────────────────────────────────────────────────
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
     container_name: rag_etcd
@@ -76,6 +73,12 @@ services:
            --data-dir=/etcd
     volumes:
       - etcd_data:/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "--endpoints=http://localhost:2379", "endpoint", "health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   milvus:
     image: milvusdb/milvus:v2.4.0
@@ -89,15 +92,18 @@ services:
     ports:
       - "19530:19530"
     depends_on:
-      - etcd
-      - minio
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     volumes:
       - milvus_data:/var/lib/milvus
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
-      interval: 30s
+      interval: 20s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
   attu:
     image: zilliz/attu:latest
@@ -107,9 +113,9 @@ services:
     ports:
       - "8888:3000"
     depends_on:
-      - milvus
+      milvus:
+        condition: service_healthy
 
-  # ── MLOps ─────────────────────────────────────────────────────────────────
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
     container_name: rag_mlflow
@@ -129,15 +135,19 @@ services:
     volumes:
       - ./mlruns:/mlflow/artifacts
       - ./mlflow_db:/mlflow
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/')\"" ]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 30s
 
-  # ── Aplicação ─────────────────────────────────────────────────────────────
   api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: rag_api
-    env_file:
-      - .env
+    env_file: .env
     environment:
       MILVUS_HOST: milvus
       MILVUS_PORT: "19530"
@@ -155,25 +165,35 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - milvus
-      - ollama
-      - mlflow
-      - postgres
+      milvus:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   ui:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: rag_ui
-    env_file:
-      - .env
+    env_file: .env
     environment:
       API_URL: http://api:8000
     ports:
       - "7860:7860"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     command: python src/ui/gradio_app.py
 
 volumes:
