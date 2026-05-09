@@ -1,4 +1,6 @@
 services:
+
+  # ── Armazenamento de Objetos ───────────────────────────────────────────────
   minio:
     image: minio/minio:latest
     container_name: rag_minio
@@ -13,7 +15,32 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # ── Banco Relacional ───────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: rag_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-rag_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_user} -d ${POSTGRES_DB:-rag_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── LLM e Embeddings ──────────────────────────────────────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: rag_ollama
@@ -21,9 +48,21 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    # Sobe dois modelos: llama3.2 (principal) e mistral (segundo modelo)
     entrypoint: >
-      sh -c "ollama serve & sleep 5 && ollama pull moondream && ollama pull nomic-embed-text && ollama pull llama3.2 && wait"
+      sh -c "ollama serve &
+             sleep 5 &&
+             ollama pull nomic-embed-text &&
+             ollama pull llama3.2 &&
+             ollama pull mistral &&
+             wait"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
+  # ── Banco Vetorial ─────────────────────────────────────────────────────────
   etcd:
     image: quay.io/coreos/etcd:v3.5.5
     container_name: rag_etcd
@@ -54,6 +93,11 @@ services:
       - minio
     volumes:
       - milvus_data:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   attu:
     image: zilliz/attu:latest
@@ -65,6 +109,7 @@ services:
     depends_on:
       - milvus
 
+  # ── MLOps ─────────────────────────────────────────────────────────────────
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
     container_name: rag_mlflow
@@ -85,9 +130,56 @@ services:
       - ./mlruns:/mlflow/artifacts
       - ./mlflow_db:/mlflow
 
+  # ── Aplicação ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag_api
+    env_file:
+      - .env
+    environment:
+      MILVUS_HOST: milvus
+      MILVUS_PORT: "19530"
+      MILVUS_COLLECTION: ${MILVUS_COLLECTION:-cgmacros_embeddings}
+      OLLAMA_URL: http://ollama:11434
+      EMBED_MODEL: ${EMBED_MODEL:-nomic-embed-text}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
+      LLM_MODEL_ALT: ${LLM_MODEL_ALT:-mistral}
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER:-rag_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-rag_db}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - milvus
+      - ollama
+      - mlflow
+      - postgres
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag_ui
+    env_file:
+      - .env
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "7860:7860"
+    depends_on:
+      - api
+    command: python src/ui/gradio_app.py
+
 volumes:
   minio_data:
   ollama_data:
   etcd_data:
   milvus_data:
   mlflow_data:
+  postgres_data:
