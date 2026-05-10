@@ -13,6 +13,8 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
+    networks:
+      - rag_net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 15s
@@ -32,6 +34,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    networks:
+      - rag_net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rag_user} -d ${POSTGRES_DB:-rag_db}"]
       interval: 10s
@@ -46,6 +50,8 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    networks:
+      - rag_net
     entrypoint: >
       sh -c "ollama serve &
              sleep 5 &&
@@ -54,7 +60,7 @@ services:
              ollama pull mistral &&
              wait"
     healthcheck:
-      test: [ "CMD-SHELL", "ollama list || exit 1" ]
+      test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -73,6 +79,8 @@ services:
            --data-dir=/etcd
     volumes:
       - etcd_data:/etcd
+    networks:
+      - rag_net
     healthcheck:
       test: ["CMD", "etcdctl", "--endpoints=http://localhost:2379", "endpoint", "health"]
       interval: 15s
@@ -98,6 +106,8 @@ services:
         condition: service_healthy
     volumes:
       - milvus_data:/var/lib/milvus
+    networks:
+      - rag_net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
       interval: 20s
@@ -105,73 +115,20 @@ services:
       retries: 10
       start_period: 30s
 
-  ingest-raw:
-    image: alpine:latest
-    container_name: rag_ingest_raw
-    env_file: .env
-    volumes:
-      - ./src/data/bronze:/data/bronze
-      - ./scripts/ingest_data.sh:/ingest_data.sh
-    entrypoint: sh /ingest_data.sh
-    depends_on:
-      minio:
-        condition: service_healthy
-    restart: on-failure
-
-    pipeline:
-      build:
-        context: .
-        dockerfile: Dockerfile
-      container_name: rag_pipeline
-      env_file: .env
-      environment:
-        MINIO_ENDPOINT: minio:9000
-        MINIO_BUCKET: ${MINIO_BUCKET:-cgmacros}
-        MINIO_USER: ${MINIO_USER}
-        MINIO_PASSWORD: ${MINIO_PASSWORD}
-        PATIENTS: ${PATIENTS:-CGMacros-012,CGMacros-039}
-        PYTHONPATH: src
-      command: >
-        sh -c "
-          python -m scripts.ingest.ingest_bronze &&
-          python -m scripts.ingest.ingest_silver &&
-          python -m scripts.ingest.ingest_gold &&
-          python -m scripts.train_model
-        "
-      depends_on:
-        ingest-raw:
-          condition: service_completed_successfully
-        milvus:
-          condition: service_healthy
-        ollama:
-          condition: service_healthy
-        mlflow:
-          condition: service_healthy
-      restart: on-failure
-
-  embeddings:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: rag_embeddings
-    env_file: .env
-    environment:
-      MINIO_ENDPOINT: minio:9000
-      MINIO_BUCKET: ${MINIO_BUCKET:-cgmacros}
-      MINIO_USER: ${MINIO_USER}
-      MINIO_PASSWORD: ${MINIO_PASSWORD}
-      MILVUS_HOST: milvus
-      MILVUS_PORT: "19530"
-      MILVUS_COLLECTION: ${MILVUS_COLLECTION:-cgmacros_embeddings}
-      OLLAMA_URL: http://ollama:11434
-      EMBED_MODEL: ${EMBED_MODEL:-nomic-embed-text}
-    depends_on:
-      milvus:
-        condition: service_healthy
-      ollama:
-        condition: service_healthy
-    command: python -m scripts.generate_embeddings
-    restart: on-failure
+#  ingest-raw:
+#    image: alpine:latest
+#    container_name: rag_ingest_raw
+#    env_file: .env
+#    volumes:
+#      - ./src/data/bronze:/data/bronze
+#      - ./scripts/ingest_data.sh:/ingest_data.sh
+#    entrypoint: sh /ingest_data.sh
+#    depends_on:
+#      minio:
+#        condition: service_healthy
+#    networks:
+#      - rag_net
+#    restart: on-failure
 
   attu:
     image: zilliz/attu:latest
@@ -183,6 +140,8 @@ services:
     depends_on:
       milvus:
         condition: service_healthy
+    networks:
+      - rag_net
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
@@ -192,19 +151,22 @@ services:
       - MLFLOW_DEFAULT_ARTIFACT_ROOT=mlflow-artifacts:/
     command: >
       mlflow server
-      --host 0.0.0.0
-      --port 5000
-      --backend-store-uri sqlite:////mlflow/mlflow.db
-      --default-artifact-root mlflow-artifacts:/
-      --artifacts-destination /mlflow/artifacts
-      --serve-artifacts
+          --host 0.0.0.0
+          --port 5000
+          --backend-store-uri sqlite:////mlflow/mlflow.db
+          --default-artifact-root mlflow-artifacts:/
+          --artifacts-destination /mlflow/artifacts
+          --serve-artifacts
     ports:
       - "5000:5000"
     volumes:
       - ./mlruns:/mlflow/artifacts
       - ./mlflow_db:/mlflow
+    networks:
+      rag_net:
+        ipv4_address: 172.28.0.10   # IP fixo — bypass do DNS rebinding check
     healthcheck:
-      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/')\"" ]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/')\""]
       interval: 15s
       timeout: 10s
       retries: 8
@@ -224,7 +186,7 @@ services:
       EMBED_MODEL: ${EMBED_MODEL:-nomic-embed-text}
       LLM_MODEL: ${LLM_MODEL:-llama3.2}
       LLM_MODEL_ALT: ${LLM_MODEL_ALT:-mistral}
-      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_TRACKING_URI: http://172.28.0.10:5000   # IP direto, sem hostname
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_USER: ${POSTGRES_USER:-rag_user}
@@ -242,8 +204,10 @@ services:
       postgres:
         condition: service_healthy
     command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - rag_net
     healthcheck:
-      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"" ]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -263,6 +227,15 @@ services:
       api:
         condition: service_healthy
     command: python src/ui/gradio_app.py
+    networks:
+      - rag_net
+
+networks:
+  rag_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
   minio_data:

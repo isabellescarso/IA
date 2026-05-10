@@ -24,7 +24,6 @@ def build_milvus_collection() -> Collection:
     return collection
 
 
-
 @lru_cache
 def build_ridge_predictor() -> RidgeGlucosePredictor:
     mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"))
@@ -33,18 +32,11 @@ def build_ridge_predictor() -> RidgeGlucosePredictor:
 
 @lru_cache
 def build_rag_pipeline() -> RagPipeline:
-    """
-    Constrói o pipeline de RAG, incluindo o embedder, retriever, predictor e cliente LLM.
-    Utiliza caching para evitar reconstrução desnecessária dos componentes.
-    """
-    # Configura o embedder para gerar vetores de embedding usando o modelo especificado
     embedder = OllamaEmbedder(
         os.getenv("OLLAMA_URL", "http://localhost:11434"),
         os.getenv("EMBED_MODEL", "nomic-embed-text"),
     )
-    # Faz o get das colecoes,
     retriever = ContextRetriever(embedder, MilvusSemanticSearcher(build_milvus_collection()))
-    # Load do modelo registrado no MLFlow
     contextual_predictor = ContextualPredictor(retriever, build_ridge_predictor())
     llm = OllamaLlmClient(
         os.getenv("OLLAMA_URL", "http://localhost:11434"),
@@ -56,7 +48,7 @@ def build_rag_pipeline() -> RagPipeline:
 @lru_cache
 def build_ask_tracker() -> AskExperimentTracker:
     return AskExperimentTracker(
-        tracking_uri="http://localhost:5000",
+        tracking_uri=os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000"),
         experiment_name="RAG_Requests",
     )
 

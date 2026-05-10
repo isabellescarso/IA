@@ -23,7 +23,6 @@ class AskResponse(BaseModel):
 # ── Persistência no PostgreSQL ────────────────────────────────────────────────
 
 def save_log_to_postgres(question: str, answer: str, model_used: str, latency_ms: int) -> None:
-    """Persiste o log da consulta no banco relacional PostgreSQL."""
     try:
         conn = psycopg.connect(
             host=os.getenv("POSTGRES_HOST", "localhost"),
@@ -35,17 +34,21 @@ def save_log_to_postgres(question: str, answer: str, model_used: str, latency_ms
         with conn:
             with conn.cursor() as cur:
                 cur.execute(
+                    "SELECT id FROM llm_models WHERE name = %s",
+                    (model_used,),
+                )
+                row = cur.fetchone()
+                model_id = row[0] if row else None
+                cur.execute(
                     """
-                    INSERT INTO ask_logs (question, answer, model_used, latency_ms)
+                    INSERT INTO ask_logs (question, answer, model_id, latency_ms)
                     VALUES (%s, %s, %s, %s)
                     """,
-                    (question, answer, model_used, latency_ms),
+                    (question, answer, model_id, latency_ms),
                 )
         conn.close()
     except Exception as e:
-        # Não quebra a API se o banco estiver indisponível
         print(f"[postgres] Erro ao salvar log: {e}")
-
 
 # ── Handler ───────────────────────────────────────────────────────────────────
 
