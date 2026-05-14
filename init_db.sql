@@ -66,3 +66,5 @@ CREATE TABLE IF NOT EXISTS prompt_experiments (
 
 CREATE INDEX IF NOT EXISTS idx_prompt_experiments_model_id
     ON prompt_experiments (model_id);
+
+ALTER TABLE ask_logs ADD COLUMN response_json JSONB;

@@ -114,22 +114,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
-
-#  ingest-raw:
-#    image: alpine:latest
-#    container_name: rag_ingest_raw
-#    env_file: .env
-#    volumes:
-#      - ./src/data/bronze:/data/bronze
-#      - ./scripts/ingest_data.sh:/ingest_data.sh
-#    entrypoint: sh /ingest_data.sh
-#    depends_on:
-#      minio:
-#        condition: service_healthy
-#    networks:
-#      - rag_net
-#    restart: on-failure
-
   attu:
     image: zilliz/attu:latest
     container_name: rag_attu
