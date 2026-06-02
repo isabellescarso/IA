@@ -1,0 +1,17 @@
+name: Qwen Config
+version: 1.0.0
+schema: v1
+
+models:
+  - name: LiteLLM
+    provider: openai
+    model: bedrock/qwen.qwen3-coder-30b-a3b-v1:0
+    apiBase: http://localhost:4000
+    apiKey: anything
+
+tabAutocompleteModel:
+  name: LiteLLM
+  provider: openai
+  model: bedrock/qwen.qwen3-coder-30b-a3b-v1:0
+  apiBase: http://localhost:4000
+  apiKey: anything

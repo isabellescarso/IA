@@ -9,3 +9,4 @@ src/data/
 *.pyc
 mlflow.db
 .idea/
+.aider*

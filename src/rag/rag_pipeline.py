@@ -8,6 +8,8 @@ from api.schemas.ask_schemas import (
     RetrievalSourceCollection, GenerationConfiguration, RagConfiguration,
 )
 from typing import Callable
+import mlflow
+
 
 class TokenUsageExtractor:
     def __init__(self, raw_response: dict):
@@ -35,7 +37,6 @@ class LlmResponse:
         return self._token_usage
 
 
-
 class OllamaLlmClient:
     def __init__(self, base_url: str, model: str):
         self._base_url = base_url
@@ -47,6 +48,19 @@ class OllamaLlmClient:
     def generate(self, prompt: str, generation_configuration: GenerationConfiguration, model: str = "") -> LlmResponse:
         resolved_model = model or self._model
         raw = self._post(prompt, generation_configuration, resolved_model)
+
+        # Log LLM response to MLflow
+        with mlflow.start_run():
+            mlflow.log_param("llm_model", resolved_model)
+            mlflow.log_param("prompt", prompt)
+            mlflow.log_param("temperature", generation_configuration.temperature)
+            mlflow.log_param("max_tokens", generation_configuration.maximum_tokens)
+            mlflow.log_param("top_p", generation_configuration.top_p)
+            mlflow.log_metric("prompt_tokens", raw.get("prompt_eval_count", 0))
+            mlflow.log_metric("completion_tokens", raw.get("eval_count", 0))
+            mlflow.log_metric("total_tokens", raw.get("prompt_eval_count", 0) + raw.get("eval_count", 0))
+            mlflow.log_text(raw["response"], "llm_response.txt")
+
         return LlmResponse(
             content=raw["response"],
             token_usage=TokenUsageExtractor(raw).extract(),
@@ -121,12 +135,12 @@ class RagPipeline:
         self._llm = llm
 
     def answer_with_retrieval(
-        self,
-        query: str,
-        model: str,
-        rag_configuration: RagConfiguration,
-        generation_configuration: GenerationConfiguration,
-        on_retrieval_complete: Callable[[], None] = lambda: None,
+            self,
+            query: str,
+            model: str,
+            rag_configuration: RagConfiguration,
+            generation_configuration: GenerationConfiguration,
+            on_retrieval_complete: Callable[[], None] = lambda: None,
     ) -> PipelineResult:
         context, prediction = self._contextual_predictor.resolve(query, rag_configuration.top_k)
         on_retrieval_complete()

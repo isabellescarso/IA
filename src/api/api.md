@@ -55,6 +55,10 @@ Content-Type: application/json
 |------------|-----------------|-------------|------------------------------------------------------------------|
 | `question` | string          | Sim         | Pergunta em linguagem natural                                    |
 | `model`    | string \| null  | Não         | Modelo LLM a usar: `"llama3.2"` ou `"mistral"`. Padrão: `llama3.2` |
+| `conversation_identifier` | string \| null | Não | Identificador de conversa para agrupar perguntas relacionadas |
+| `rag_configuration` | RagConfiguration | Não | Configurações específicas para busca vetorial |
+| `generation_configuration` | GenerationConfiguration | Não | Configurações para geração de resposta LLM |
+| `request_metadata` | RequestMetadata | Não | Metadados adicionais sobre a requisição |
 
 **Exemplo de request — modelo padrão**
 
@@ -73,19 +77,62 @@ Content-Type: application/json
 }
 ```
 
+**Exemplo de request com configurações avançadas**
+
+```json
+{
+  "question": "Qual o impacto de carboidratos na glicose?",
+  "model": "llama3.2",
+  "conversation_identifier": "conv-12345",
+  "rag_configuration": {
+    "top_k": 5,
+    "collection_name": "cgmacros_embeddings",
+    "rerank_enabled": false
+  },
+  "generation_configuration": {
+    "temperature": 0.3,
+    "maximum_tokens": 1024,
+    "top_p": 0.95
+  }
+}
+```
+
 **Response — 200 OK**
 
 | Campo        | Tipo   | Descrição                               |
 |--------------|--------|-----------------------------------------|
 | `answer`     | string | Resposta gerada pelo LLM com contexto   |
 | `model_used` | string | Nome do modelo que gerou a resposta     |
+| `token_usage` | TokenUsage | Estatísticas de uso de tokens |
+| `latency_breakdown` | LatencyBreakdown | Métricas de tempo de processamento |
+| `retrieval_detail` | RetrievalDetail | Detalhes da busca e fontes utilizadas |
 
 **Exemplo de response**
 
 ```json
 {
   "answer": "Com base nos dados do paciente CGMacros-012, o consumo de carboidratos simples provoca elevação média de glicose de 45 mg/dL em aproximadamente 30 minutos após a refeição...",
-  "model_used": "llama3.2"
+  "model_used": "llama3.2",
+  "token_usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 85,
+    "total_tokens": 205
+  },
+  "latency_breakdown": {
+    "total_milliseconds": 3420,
+    "retrieval_milliseconds": 1200,
+    "generation_milliseconds": 2220
+  },
+  "retrieval_detail": {
+    "collection_name": "cgmacros_embeddings",
+    "embedding_model_name": "nomic-embed-text",
+    "sources": [
+      {
+        "chunk_identifier": "12345",
+        "similarity_score": 0.78
+      }
+    ]
+  }
 }
 ```
 
@@ -177,7 +224,22 @@ GET /health
 ```json
 {
   "question": "string",
-  "model": "string | null"
+  "model": "string | null",
+  "conversation_identifier": "string | null",
+  "rag_configuration": {
+    "top_k": 4,
+    "collection_name": "cgmacros_embeddings",
+    "rerank_enabled": false
+  },
+  "generation_configuration": {
+    "temperature": 0.2,
+    "maximum_tokens": 512,
+    "top_p": 0.9
+  },
+  "request_metadata": {
+    "user_identifier": "string",
+    "client_origin": "string"
+  }
 }
 ```
 
@@ -185,8 +247,30 @@ GET /health
 
 ```json
 {
+  "request_identifier": "string",
+  "conversation_identifier": "string",
+  "model_used": "string",
   "answer": "string",
-  "model_used": "string"
+  "token_usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "latency_breakdown": {
+    "total_milliseconds": 0,
+    "retrieval_milliseconds": 0,
+    "generation_milliseconds": 0
+  },
+  "retrieval_detail": {
+    "collection_name": "string",
+    "embedding_model_name": "string",
+    "sources": [
+      {
+        "chunk_identifier": "string",
+        "similarity_score": 0.0
+      }
+    ]
+  }
 }
 ```
 
@@ -210,6 +294,79 @@ GET /health
       "status": "string",
       "time": "string (ISO 8601)",
       "version": "string"
+    }
+  ]
+}
+```
+
+### `RagConfiguration`
+
+```json
+{
+  "top_k": 4,
+  "collection_name": "cgmacros_embeddings",
+  "rerank_enabled": false
+}
+```
+
+### `GenerationConfiguration`
+
+```json
+{
+  "temperature": 0.2,
+  "maximum_tokens": 512,
+  "top_p": 0.9
+}
+```
+
+### `RequestMetadata`
+
+```json
+{
+  "user_identifier": "string",
+  "client_origin": "string"
+}
+```
+
+### `TokenUsage`
+
+```json
+{
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "total_tokens": 0
+}
+```
+
+### `LatencyBreakdown`
+
+```json
+{
+  "total_milliseconds": 0,
+  "retrieval_milliseconds": 0,
+  "generation_milliseconds": 0
+}
+```
+
+### `RetrievalSource`
+
+```json
+{
+  "chunk_identifier": "string",
+  "similarity_score": 0.0
+}
+```
+
+### `RetrievalDetail`
+
+```json
+{
+  "collection_name": "string",
+  "embedding_model_name": "string",
+  "sources": [
+    {
+      "chunk_identifier": "string",
+      "similarity_score": 0.0
     }
   ]
 }
@@ -303,6 +460,9 @@ O endpoint foi nomeado `/ask` pois o sistema responde perguntas em linguagem nat
 
 **Seleção de modelo por chamada**  
 O campo `model` no body permite escolher entre `llama3.2` e `mistral` sem reiniciar a API, facilitando comparações de qualidade de resposta.
+
+**Configurações avançadas**  
+Permite ajustar parâmetros de busca vetorial e geração de texto para otimizar resultados.
 
 **Persistência em PostgreSQL**  
 Além do MLflow, os logs são salvos no PostgreSQL para facilitar consultas relacionais e análises históricas. Em caso de falha do banco, a API continua operando normalmente (fail-safe).

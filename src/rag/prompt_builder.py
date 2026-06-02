@@ -1,6 +1,6 @@
 from rag.retriever import RetrievedContext
-
 from rag.glucose_predictor import GlucosePrediction
+
 class RagPrompt:
     def __init__(self, content: str):
         self._content = content
