@@ -17,3 +17,7 @@ class AskExecutionTimer:
 
     def total_milliseconds(self) -> int:
         return int((time.monotonic() - self._start_time) * 1000)
+        
+    def get_total_seconds(self) -> float:
+        """Retorna o tempo total em segundos"""
+        return time.monotonic() - self._start_time

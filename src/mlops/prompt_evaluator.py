@@ -3,7 +3,7 @@ import mlflow
 """
 Run name: prompt_{variant_name}
 Params: variant, answer (truncado em 500 chars)
-Metrics: latency_seconds, answer_length
+Metrics: latency_seconds, answer_length, relevance_score
 """
 class PromptVariant:
     def __init__(self, name: str, template: str):
@@ -18,10 +18,11 @@ class PromptVariant:
 
 
 class PromptEvaluationResult:
-    def __init__(self, variant_name: str, answer: str, latency: float):
+    def __init__(self, variant_name: str, answer: str, latency: float, relevance_score: float = None):
         self._variant_name = variant_name
         self._answer = answer
         self._latency = latency
+        self._relevance_score = relevance_score
 
     def log(self) -> None:
         with mlflow.start_run(run_name=f"prompt_{self._variant_name}"):
@@ -29,6 +30,10 @@ class PromptEvaluationResult:
             mlflow.log_param("answer", self._answer[:500])
             mlflow.log_metric("latency_seconds", self._latency)
             mlflow.log_metric("answer_length", len(self._answer))
+            
+            # Adiciona métrica de relevância se fornecida
+            if self._relevance_score is not None:
+                mlflow.log_metric("relevance_score", self._relevance_score)
 
 
 class PromptVariantCollection:
