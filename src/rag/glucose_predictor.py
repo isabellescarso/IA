@@ -4,13 +4,15 @@ from rag.trained_feature_names import TrainedFeatureNames
 
 
 class GlucosePrediction:
-    def __init__(self, value: float):
+    def __init__(self, value: float | None):
         self._value = value
 
     def as_text(self) -> str:
+        if self._value is None:
+            return ""
         return f"Predição do modelo (Ridge): glicose estimada em {self._value:.1f} mg/dL nos próximos 30 minutos."
 
-    def as_float(self) -> float:
+    def as_float(self) -> float | None:
         return self._value
 
 
@@ -18,8 +20,6 @@ class RidgeGlucosePredictor:
     def __init__(self, model, feature_names: TrainedFeatureNames):
         self._model = model
         self._feature_names = feature_names
-
-
 
     def predict(self, raw_frame: pd.DataFrame) -> GlucosePrediction:
         aligned = self._feature_names.align(raw_frame)

@@ -10,5 +10,10 @@ class RidgeGlucosePredictorLoader:
 
     def load(self) -> RidgeGlucosePredictor:
         model = mlflow.sklearn.load_model(f"models:/{self._model_name}/latest")
-        feature_names = TrainedFeatureNames(model.feature_names_in_.tolist())
+        print("[loader] type:", type(model))
+        print("[loader] feature_names_in_:", getattr(model, "feature_names_in_", "NOT FOUND"))
+        print("[loader] steps:", getattr(model, "steps", "NOT A PIPELINE"))
+        names = model.feature_names_in_.tolist()
+        print("[loader] names[:5]:", names[:5])
+        feature_names = TrainedFeatureNames(names)
         return RidgeGlucosePredictor(model, feature_names)

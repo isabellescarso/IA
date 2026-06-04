@@ -44,12 +44,32 @@ class RetrievedContext:
 
 
 class ContextRetriever:
-    def __init__(self, embedder: OllamaEmbedder, searcher: MilvusSemanticSearcher):
+    def __init__(self, collections: list, embedder, top_k_per_collection: int = 4):
+        self._collections = collections
         self._embedder = embedder
-        self._searcher = searcher
+        self._top_k_per_collection = top_k_per_collection
 
-    def retrieve(self, query_text: str, top_k: int = 3) -> RetrievedContext:
-        embedding = self._embedder.embed(SemanticQuery(query_text).as_text())
-        raw_hits = self._searcher.search_with_metadata(embedding.as_list(), top_k)
-        records = [SourceRecord(hit) for hit in raw_hits]
-        return RetrievedContext(SourceRecordCollection(records))
+    def retrieve(self, question: str, top_k: int) -> RetrievedContext:
+        query_vector = self._embedder.embed(question).as_list()
+        all_records = []
+
+        for collection in self._collections:
+            results = collection.search(
+                data=[query_vector],
+                anns_field="embedding",
+                param={"metric_type": "L2", "params": {"nprobe": 10}},
+                limit=top_k,
+                output_fields=["text"],
+            )
+            for hits in results:
+                for hit in hits:
+                    all_records.append(
+                        SourceRecord({
+                            "chunk_id": hit.id,
+                            "distance": hit.score,
+                            "text": hit.entity.get("text", ""),
+                        })
+                    )
+
+        all_records.sort(key=lambda r: r.score, reverse=False)
+        return RetrievedContext(SourceRecordCollection(all_records[:top_k]))

@@ -11,6 +11,8 @@ from rag.glucose_predictor import RidgeGlucosePredictor
 import mlflow
 from rag.rag_pipeline import ContextualPredictor, OllamaLlmClient, RagPipeline
 
+from embeddings.milvus_indexer import MilvusCollectionFactory
+
 
 @lru_cache
 def build_milvus_collection() -> Collection:
@@ -32,17 +34,29 @@ def build_ridge_predictor() -> RidgeGlucosePredictor:
 
 @lru_cache
 def build_rag_pipeline() -> RagPipeline:
+    milvus_host = os.getenv("MILVUS_HOST", "localhost")
+    milvus_port = os.getenv("MILVUS_PORT", "19530")
+
+    connections.connect(alias="default", host=milvus_host, port=milvus_port)
+
     embedder = OllamaEmbedder(
         os.getenv("OLLAMA_URL", "http://localhost:11434"),
         os.getenv("EMBED_MODEL", "nomic-embed-text"),
     )
-    retriever = ContextRetriever(embedder, MilvusSemanticSearcher(build_milvus_collection()))
-    contextual_predictor = ContextualPredictor(retriever, build_ridge_predictor())
+    dimension = embedder.embed("dim").dimension()
+
+    col_clinical = MilvusCollectionFactory("cgmacros_embeddings", milvus_host, milvus_port).get_or_create(dimension)
+    col_mlflow   = MilvusCollectionFactory("mlflow_embeddings",   milvus_host, milvus_port).get_or_create(dimension)
+
+    retriever = ContextualPredictor(
+        ContextRetriever(collections=[col_clinical, col_mlflow], embedder=embedder),
+        build_ridge_predictor(),
+    )
     llm = OllamaLlmClient(
         os.getenv("OLLAMA_URL", "http://localhost:11434"),
         os.getenv("LLM_MODEL", "llama3.2"),
     )
-    return RagPipeline(contextual_predictor, llm)
+    return RagPipeline(retriever, llm)
 
 
 @lru_cache

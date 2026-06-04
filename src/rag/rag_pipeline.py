@@ -86,9 +86,10 @@ class OllamaLlmClient:
 
 
 class PipelineResult:
-    def __init__(self, llm_response: LlmResponse, retrieval_detail: RetrievalDetail):
+    def __init__(self, llm_response: LlmResponse, retrieval_detail: RetrievalDetail, model_used: str):
         self._llm_response = llm_response
         self._retrieval_detail = retrieval_detail
+        self._model_used = model_used
 
     def answer_text(self) -> str:
         return self._llm_response.as_text()
@@ -98,6 +99,10 @@ class PipelineResult:
 
     def retrieval_detail(self) -> RetrievalDetail:
         return self._retrieval_detail
+
+    def model_used(
+            self) -> str:
+        return self._model_used
 
 
 class RetrievalTimer:
@@ -125,8 +130,18 @@ class ContextualPredictor:
 
     def resolve(self, question: str, top_k: int) -> tuple[RetrievedContext, GlucosePrediction]:
         context = self._retriever.retrieve(question, top_k)
-        prediction = self._predictor.predict(context.as_feature_row())
-        return context, prediction
+
+        clinical_texts = [
+            r.text for r in context.source_records()
+            if not r.text.startswith("Experimento:")
+        ]
+
+        if not clinical_texts:
+            return context, GlucosePrediction(None)
+
+        from embeddings.text_builder import TextCollectionParser
+        feature_row = TextCollectionParser(clinical_texts).as_feature_dataframe()
+        return context, self._predictor.predict(feature_row)
 
 
 class RagPipeline:
@@ -153,4 +168,4 @@ class RagPipeline:
             embedding_model_name=self._llm.model_name(),
             sources=[r.to_schema() for r in context.source_records()],
         )
-        return PipelineResult(llm_response, retrieval_detail)
+        return PipelineResult(llm_response, retrieval_detail, model)
