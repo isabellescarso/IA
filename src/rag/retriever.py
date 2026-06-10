@@ -54,6 +54,7 @@ class ContextRetriever:
         all_records = []
 
         for collection in self._collections:
+            print(f"[retriever] buscando em: {collection.name}, entidades: {collection.num_entities}")
             results = collection.search(
                 data=[query_vector],
                 anns_field="embedding",

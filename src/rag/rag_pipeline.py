@@ -133,7 +133,9 @@ class ContextualPredictor:
 
         clinical_texts = [
             r.text for r in context.source_records()
-            if not r.text.startswith("Experimento:")
+            if not r.text.startswith("Experimento de Machine Learning:")
+               and ": " in r.text
+               and " | " in r.text
         ]
 
         if not clinical_texts:
@@ -142,7 +144,6 @@ class ContextualPredictor:
         from embeddings.text_builder import TextCollectionParser
         feature_row = TextCollectionParser(clinical_texts).as_feature_dataframe()
         return context, self._predictor.predict(feature_row)
-
 
 class RagPipeline:
     def __init__(self, contextual_predictor: ContextualPredictor, llm: OllamaLlmClient):

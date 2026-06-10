@@ -15,12 +15,17 @@ from embeddings.milvus_indexer import MilvusCollectionFactory
 
 
 @lru_cache
-def build_milvus_collection() -> Collection:
+def build_milvus_connection() -> None:
     connections.connect(
         alias="default",
         host=os.getenv("MILVUS_HOST", "localhost"),
         port=os.getenv("MILVUS_PORT", "19530"),
     )
+
+
+@lru_cache
+def build_milvus_collection() -> Collection:
+    build_milvus_connection()
     collection = Collection(os.getenv("MILVUS_COLLECTION", "cgmacros_embeddings"))
     collection.load()
     return collection
@@ -34,19 +39,17 @@ def build_ridge_predictor() -> RidgeGlucosePredictor:
 
 @lru_cache
 def build_rag_pipeline() -> RagPipeline:
-    milvus_host = os.getenv("MILVUS_HOST", "localhost")
-    milvus_port = os.getenv("MILVUS_PORT", "19530")
-
-    connections.connect(alias="default", host=milvus_host, port=milvus_port)
+    build_milvus_connection()
 
     embedder = OllamaEmbedder(
         os.getenv("OLLAMA_URL", "http://localhost:11434"),
         os.getenv("EMBED_MODEL", "nomic-embed-text"),
     )
-    dimension = embedder.embed("dim").dimension()
 
-    col_clinical = MilvusCollectionFactory("cgmacros_embeddings", milvus_host, milvus_port).get_or_create(dimension)
-    col_mlflow   = MilvusCollectionFactory("mlflow_embeddings",   milvus_host, milvus_port).get_or_create(dimension)
+    col_clinical = Collection("cgmacros_embeddings")
+    col_clinical.load()
+    col_mlflow = Collection("mlflow_embeddings")
+    col_mlflow.load()
 
     retriever = ContextualPredictor(
         ContextRetriever(collections=[col_clinical, col_mlflow], embedder=embedder),
